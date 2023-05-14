@@ -25,8 +25,9 @@
 #                        --rounds 300 --seed 2 --NIID --print_freq 50"
 
 
-python3.8 \
-      train_dnn.py \
+python -m torch.distributed.run \
+      --nproc_per_node 3 \
+      cnn/train_dnn.py \
       --constantE \
       --lr 0.005 \
       --bs 64 \
@@ -43,12 +44,38 @@ python3.8 \
       --model MLP \
       --rank 0  \
       --backend gloo \
-      --initmethod 'file:///Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection' \
+      --initmethod 'env://' \
       --rounds 300 \
       --seed 2 \
-      --out_fname '/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection' \
+      --out_fname '/content/client-selection' \
       --NIID \
       --print_freq 50
+
+
+#python3.8 \
+#      train_dnn.py \
+#      --constantE \
+#      --lr 0.005 \
+#      --bs 64 \
+#      --localE 30 \
+#      --alpha 2 \
+#      --dataset fmnist \
+#      --seltype rand \
+#      --powd 2 \
+#      --ensize 100 \
+#      --fracC 0.03 \
+#      --size 3 \
+#      --save -p \
+#      --optimizer fedavg \
+#      --model MLP \
+#      --rank 0  \
+#      --backend gloo \
+#      --initmethod 'file:///Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection' \
+#      --rounds 300 \
+#      --seed 2 \
+#      --out_fname '/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection' \
+#      --NIID \
+#      --print_freq 50
 
 
 #python -m torch.distributed.run \
