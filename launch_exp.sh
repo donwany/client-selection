@@ -43,7 +43,7 @@ python -m torch.distributed.run \
       --optimizer fedavg \
       --model MLP \
       --rank 0  \
-      --backend gloo \
+      --backend "nccl" \
       --initmethod 'env://' \
       --rounds 300 \
       --seed 2 \
