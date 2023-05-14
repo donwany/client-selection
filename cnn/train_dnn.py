@@ -6,7 +6,7 @@ import random
 import time
 import pathlib
 import logging
-
+import os
 import torch
 import torch.distributed as dist
 import torch.utils.data.distributed
@@ -18,6 +18,8 @@ from fedavg import fedavg
 import util_v4 as util
 import models
 from params import args_parser
+
+os.environ['OMP_NUM_THREADS'] = '1'
 
 logging.basicConfig(format='%(levelname)s - %(message)s', level=logging.INFO)
 logging.debug('This message should appear on the console')
