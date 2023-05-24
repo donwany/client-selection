@@ -18,6 +18,7 @@ from fedavg import fedavg
 import util_v4 as util
 import models
 from params import args_parser
+from pathlib import Path
 
 os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -29,7 +30,9 @@ args = args_parser()
 
 def run(rank, size):
     # initiate experiments folder
-    save_path = '/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection/'
+    MODEL_PATH = Path(Path(__file__).parent.parent)
+    save_path = "./"
+    # '/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection/'
     fold = 'lr{:.4f}_bs{}_cp{}_a{:.2f}_e{}_r0_n{}_f{:.2f}/'.format(args.lr, args.bs, args.localE, args.alpha, args.seed,
                                                                    args.ensize, args.fracC)
     if args.commE:
@@ -93,7 +96,11 @@ def run(rank, size):
         len_in = 1
         for x in args.img_size:
             len_in *= x
-        model = models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda()
+        local_rank = int(os.environ["LOCAL_RANK"])
+        model = nn.parallel.DistributedDataParallel(
+            module=models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda(),
+            device_ids=[local_rank])
+        # model = models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda()
 
     else:
         model = models.vgg11().cuda()  # vgg
@@ -313,7 +320,7 @@ def train(model, criterion, optimizer, loader, epoch):
         if batch_idx % args.print_freq == 0 and args.save:
             logging.debug('epoch {} itr {}, '
                           'rank {}, loss value {:.4f}, train accuracy {:.3f}'
-                          .format(epoch, batch_idx, rank, los, acc))
+                          .format(epoch, batch_idx, 0, los, acc))
 
             with open(args.out_fname, '+a') as f:
                 print('{ep},{itr},'
@@ -359,8 +366,11 @@ def init_processes(rank, size, fn):
     fn(rank, size)
 
 
-if __name__ == "__main__":
+def main():
     rank = args.rank
     size = args.size
-
     init_processes(rank, size, run)
+
+
+if __name__ == "__main__":
+    main()

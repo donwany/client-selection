@@ -116,7 +116,7 @@ def args_parser():
                         type=str,
                         help='optimizer name')
     parser.add_argument('--initmethod',
-                        default='file:///Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection/dnn/env',
+                        default='env://',
                         type=str,
                         help='init method')
     parser.add_argument('--mu',
