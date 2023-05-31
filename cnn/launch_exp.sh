@@ -30,7 +30,7 @@ python -m torch.distributed.run \
       --nnodes 2 \
       --node_rank 0 \
       --master_addr "129.146.3.197" \
-      --master_port=1234
+      --master_port=1234 \
       train_dnn.py \
       --constantE \
       --lr 0.005 \
