@@ -8,14 +8,14 @@ from azure.ai.ml.constants import AssetTypes
 from azure.ai.ml.entities import AmlCompute, Environment, Model
 from azure.identity import DefaultAzureCredential
 
-COMPUTE_NAME = "cluster-distributed-gpu-v4"
+COMPUTE_NAME = "cluster-distributed-gpu-v8"
 # DATA_NAME = "data-fashion-mnist"
 # DATA_PATH = Path(Path(__file__).parent.parent, "data")
 CONDA_PATH = "/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection/cnn/conda.yml"
 CODE_PATH = "/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection/cnn"
 MODEL_PATH = "/Users/tsiameh/Desktop/paper-writing/FLFSL/FL-Client-Selection/cnn/"
-EXPERIMENT_NAME = "aml_distributed-v4"
-MODEL_NAME = "model-distributed-v4"
+EXPERIMENT_NAME = "aml_distributed-v8"
+MODEL_NAME = "model-distributed-v8"
 
 
 def main() -> None:
@@ -31,15 +31,56 @@ def main() -> None:
 
     # Create the compute cluster.
     # Each Standard_NC24 node has 4 NVIDIA Tesla K80 GPUs.
-    cluster = AmlCompute(
-        name=COMPUTE_NAME,
-        type="amlcompute",
-        size="STANDARD_NC6",  # "Standard_NC24",
-        location="westus2",
-        min_instances=0,
-        max_instances=2,
+    # cluster = AmlCompute(
+    #     name=COMPUTE_NAME,
+    #     type="amlcompute",
+    #     size="STANDARD_NC6",  # "Standard_NC24",
+    #     min_instances=0,
+    #     max_instances=4,
+    #     # How many seconds will the node running after the job termination
+    #     idle_time_before_scale_down=180,
+    #     # Dedicated or LowPriority. The latter is cheaper but there is a chance of job termination
+    #     tier="Dedicated",
+    # )
+    # ml_client.begin_create_or_update(cluster)
+    # from azure.ai.ml.entities import AmlCompute
+
+    gpu_compute_taget = COMPUTE_NAME
+
+    # try:
+    #     # let's see if the compute target already exists
+    #     gpu_cluster = ml_client.compute.get(gpu_compute_taget)
+    #     print(
+    #         f"You already have a cluster named {gpu_compute_taget}, we'll reuse it as is."
+    #     )
+    #
+    # except Exception:
+    #     print("Creating a new gpu compute target...")
+
+    # Let's create the Azure ML compute object with the intended parameters
+    gpu_cluster = AmlCompute(
+            # Name assigned to the compute cluster
+            name=COMPUTE_NAME,
+            # Azure ML Compute is the on-demand VM service
+            type="amlcompute",
+            # VM Family
+            size="Standard_NC6",
+            # Minimum running nodes when there is no job running
+            min_instances=0,
+            # Nodes in cluster
+            max_instances=2,
+            # How many seconds will the node running after the job termination
+            idle_time_before_scale_down=180,
+            # Dedicated or LowPriority. The latter is cheaper but there is a chance of job termination
+            tier="Dedicated",
+        )
+
+    # Now, we pass the object to MLClient's create_or_update method
+    gpu_cluster = ml_client.begin_create_or_update(gpu_cluster).result()
+
+    print(
+        f"AMLCompute with name {gpu_cluster.name} is created, the compute size is {gpu_cluster.size}"
     )
-    ml_client.begin_create_or_update(cluster)
 
     # from azure.ai.ml.entities import AmlCompute
     #
@@ -86,15 +127,14 @@ def main() -> None:
         description="Trains a simple neural network on the Fashion-MNIST " +
                     "dataset.",
         experiment_name=EXPERIMENT_NAME,
-        compute=COMPUTE_NAME,
-        outputs=dict(model=Output(type=AssetTypes.MLFLOW_MODEL)),
+        compute=gpu_compute_taget,
+        # outputs=dict(model=Output(type=AssetTypes.MLFLOW_MODEL)),
         code="./",
         environment="AzureML-pytorch-1.10-ubuntu18.04-py38-cuda11-gpu@latest",
-        resources=dict(instance_count=2),
-        distribution=dict(type="PyTorch", process_count_per_instance=4),
-        command="python train_dnn.py --lr ${{inputs.lr}} --bs ${{inputs.bs}} --localE ${{inputs.localE}} --alpha ${{inputs.alpha}} --dataset ${{inputs.dataset}} --seltype ${{inputs.seltype}} --powd ${{inputs.powd}} --ensize ${{inputs.ensize}} --fracC ${{inputs.fracC}} --size ${{inputs.size}} --save ${{inputs.save}} --optimizer ${{inputs.optimizer}} --model ${{inputs.model}} --rank ${{inputs.rank}} --backend ${{inputs.backend}} --initmethod ${{inputs.initmethod}} --rounds ${{inputs.rounds}} --seed ${{inputs.seed}} --NIID ${{inputs.NIID}} --print_freq ${{inputs.print_freq}}",
+        resources=dict(instance_count=1),
+        distribution=dict(type="PyTorch", process_count_per_instance=3),
+        command="python train_dnn.py --lr ${{inputs.lr}} --bs ${{inputs.bs}} --localE ${{inputs.localE}} --alpha ${{inputs.alpha}} --dataset ${{inputs.dataset}} --seltype ${{inputs.seltype}} --powd ${{inputs.powd}} --ensize ${{inputs.ensize}} --fracC ${{inputs.fracC}} --size ${{inputs.size}} --save ${{inputs.save}} --optimizer ${{inputs.optimizer}} --model ${{inputs.model}} --rank ${{inputs.rank}} --backend ${{inputs.backend}} --initmethod ${{inputs.initmethod}} --rounds ${{inputs.rounds}} --seed ${{inputs.seed}} --print_freq ${{inputs.print_freq}}",
         inputs={
-            "constantE": True,
             "lr": 0.005,
             "bs": 64,
             "localE": 30,
@@ -113,7 +153,6 @@ def main() -> None:
             "initmethod": "env://",
             "rounds": 300,
             "seed": 2,
-            "NIID": False,
             "print_freq": 50
         }
         # + "--model_dir ${{outputs.model}}",

@@ -66,7 +66,7 @@ def run(rank, size):
     torch.backends.cudnn.deterministic = True
 
     # load data
-    partition, train_loader, test_loader, dataratios, datstat, endat = util.partition_dataset(size, args, 0)
+    partition, train_loader, test_loader, dataratios = util.partition_dataset(size, args, 0)
 
     # initialization for client selection
     cli_loss, cli_freq, cli_val = np.zeros(args.ensize) + 1, np.zeros(args.ensize), np.zeros(args.ensize)
@@ -91,21 +91,22 @@ def run(rank, size):
     dist.barrier()
     sel_idx = int(send[rank])
 
+    local_rank = int(os.environ["LOCAL_RANK"])
+    device = torch.device("cuda", local_rank)
     # define neural nets model, criterion, and optimizer
     if args.model == 'MLP':
         len_in = 1
         for x in args.img_size:
             len_in *= x
-        local_rank = int(os.environ["LOCAL_RANK"])
         model = nn.parallel.DistributedDataParallel(
-            module=models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda(),
+            module=models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).to(device),
             device_ids=[local_rank])
         # model = models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda()
 
     else:
-        model = models.vgg11().cuda()  # vgg
+        model = models.vgg11().to(device)  # vgg
 
-    criterion = nn.NLLLoss().cuda()
+    criterion = nn.NLLLoss().to(device)
 
     # select optimizer according to algorithm
     algorithms = {'fedavg': fedavg}
@@ -357,9 +358,17 @@ def update_learning_rate(optimizer, epoch, target_lr):
 
 def init_processes(rank, size, fn):
     """ Initialize the distributed environment. """
+    # distributed_backend = args.backend
+    # if distributed_backend == "nccl":
+    #     size = int(os.environ.get("WORLD_SIZE", "1"))
+    #     rank = int(os.environ.get("RANK", "0"))
+    #     local_world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+    #     local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    #     multinode_available = size > 1
+    #     self_is_main_node = rank == 0
 
     dist.init_process_group(backend=args.backend,
-                            timeout=datetime.timedelta(hours=5),
+                            timeout=datetime.timedelta(hours=15),
                             init_method=args.initmethod,
                             rank=rank,
                             world_size=size)
@@ -367,8 +376,10 @@ def init_processes(rank, size, fn):
 
 
 def main():
-    rank = args.rank
-    size = args.size
+    print(args.rank)
+    rank = int(os.environ["RANK"])
+    print(args.size)
+    size = int(os.environ["WORLD_SIZE"])
     init_processes(rank, size, run)
 
 

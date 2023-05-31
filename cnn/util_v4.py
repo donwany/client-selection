@@ -196,7 +196,7 @@ def partition_dataset(size, args, rnd):
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))])
 
-        trainset = torchvision.datasets.FashionMNIST(root='./data',
+        trainset = torchvision.datasets.FashionMNIST(root='./',
                                                      train=True,
                                                      download=True,
                                                      transform=apply_transform)
@@ -217,7 +217,7 @@ def partition_dataset(size, args, rnd):
                                     dataset=args.dataset, print_f=args.print_freq)
         ratio = partition.ratio  # Ratio of data sizes
 
-        testset = torchvision.datasets.FashionMNIST(root='./data',
+        testset = torchvision.datasets.FashionMNIST(root='./',
                                                     train=False,
                                                     download=True,
                                                     transform=apply_transform)
@@ -247,7 +247,7 @@ def partition_dataset(size, args, rnd):
                                     dataset=args.dataset, print_f=args.print_freq)
         ratio = partition.ratio  # Ratio of data sizes
 
-        testset = torchvision.datasets.EMNIST(root='./data',
+        testset = torchvision.datasets.EMNIST(root='./',
                                               split='digits',
                                               train=False,
                                               download=True,
@@ -261,7 +261,8 @@ def partition_dataset(size, args, rnd):
 
     args.img_size = trainset[0][0].shape
 
-    return partition, train_loader, test_loader, ratio, partition.dat_stat, partition.endat_size
+    return partition, train_loader, test_loader, ratio
+    # partition.dat_stat, partition.endat_size
 
 
 def partitiondata_loader(partition, rank, batch_size):

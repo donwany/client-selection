@@ -26,7 +26,11 @@
 
 
 python -m torch.distributed.run \
-      --nproc_per_node 3 \
+      --nproc_per_node 2 \
+      --nnodes 2 \
+      --node_rank 0 \
+      --master_addr "129.146.3.197" \
+      --master_port=1234
       train_dnn.py \
       --constantE \
       --lr 0.005 \
@@ -49,6 +53,35 @@ python -m torch.distributed.run \
       --seed 2 \
       --NIID \
       --print_freq 50
+
+#!python -m torch.distributed.run \
+#      --nproc_per_node 1 \
+#      --nnodes=1 \
+#      --node_rank=0 \
+#      --master_addr=150.136.42.91 \
+#      --master_port=1234 \
+#      client-selection/cnn/train_dnn.py \
+#      --constantE \
+#      --lr 0.005 \
+#      --bs 64 \
+#      --localE 30 \
+#      --alpha 2 \
+#      --dataset fmnist \
+#      --seltype rand \
+#      --powd 2 \
+#      --ensize 100 \
+#      --fracC 0.03 \
+#      --size 3 \
+#      --save -p \
+#      --optimizer fedavg \
+#      --model MLP \
+#      --rank 0  \
+#      --backend "nccl" \
+#      --initmethod 'env://' \
+#      --rounds 300 \
+#      --seed 2 \
+#      --NIID \
+#      --print_freq 50
 
 
 #python3.8 \
