@@ -102,8 +102,11 @@ def run(rank, size):
         #     module=models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).to(device),
         #     device_ids=[local_rank])
         # model = models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda()
-        model = nn.DataParallel(
-            models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda())
+
+        if torch.cuda.device_count() > 1:
+            logging.info("Gpu count: {}".format(torch.cuda.device_count()))
+            model = nn.DataParallel(
+                models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda())
 
     else:
         model = models.vgg11().cuda()  # vgg
