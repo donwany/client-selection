@@ -22,8 +22,8 @@ from pathlib import Path
 
 os.environ['OMP_NUM_THREADS'] = '1'
 
-logging.basicConfig(format='%(levelname)s - %(message)s', level=logging.INFO)
-logging.debug('This message should appear on the console')
+# logging.basicConfig(format='%(levelname)s - %(message)s', level=logging.INFO)
+# logging.debug('This message should appear on the console')
 
 args = args_parser()
 
@@ -98,15 +98,17 @@ def run(rank, size):
         len_in = 1
         for x in args.img_size:
             len_in *= x
-        model = nn.parallel.DistributedDataParallel(
-            module=models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).to(device),
-            device_ids=[local_rank])
+        # model = nn.parallel.DistributedDataParallel(
+        #     module=models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).to(device),
+        #     device_ids=[local_rank])
         # model = models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda()
+        model = nn.DataParallel(
+            models.MLP(dim_in=len_in, dim_hidden1=64, dim_hidden2=30, dim_out=args.num_classes).cuda())
 
     else:
-        model = models.vgg11().to(device)  # vgg
+        model = models.vgg11().cuda()  # vgg
 
-    criterion = nn.NLLLoss().to(device)
+    criterion = nn.NLLLoss().cuda()
 
     # select optimizer according to algorithm
     algorithms = {'fedavg': fedavg}
@@ -358,29 +360,37 @@ def update_learning_rate(optimizer, epoch, target_lr):
 
 def init_processes(rank, size, fn):
     """ Initialize the distributed environment. """
-    # distributed_backend = args.backend
-    # if distributed_backend == "nccl":
-    #     size = int(os.environ.get("WORLD_SIZE", "1"))
-    #     rank = int(os.environ.get("RANK", "0"))
-    #     local_world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
-    #     local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-    #     multinode_available = size > 1
-    #     self_is_main_node = rank == 0
 
     dist.init_process_group(backend=args.backend,
                             timeout=datetime.timedelta(hours=15),
                             init_method=args.initmethod,
                             rank=rank,
                             world_size=size)
+    logging.info(
+        "Initialized the distributed environment: '{}' backend on {} nodes. ".format(
+            args.backend, dist.get_world_size()
+        )
+        + "Current host rank is {}. Using cuda: {}. Number of gpus: {}".format(
+            dist.get_rank(), torch.cuda.is_available(), args.num_gpus
+        )
+    )
     fn(rank, size)
 
 
 def main():
-    print(args.rank)
-    rank = int(os.environ["RANK"])
-    print(args.size)
-    size = int(os.environ["WORLD_SIZE"])
-    init_processes(rank, size, run)
+    # print(args.rank)
+    # rank = int(os.environ["RANK"])
+    # print(args.size)
+    # size = int(os.environ["WORLD_SIZE"])
+    # Initialize the distributed environment.
+    is_distributed = len(args.hosts) > 1 and args.backend is not None
+    logging.debug("Distributed training - {}".format(is_distributed))
+    if is_distributed:
+        size = len(args.hosts)
+        os.environ["WORLD_SIZE"] = str(size)
+        rank = args.hosts.index(args.current_host)
+        os.environ["RANK"] = str(rank)
+        init_processes(rank, size, run)
 
 
 if __name__ == "__main__":

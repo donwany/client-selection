@@ -1,5 +1,10 @@
 import argparse
 
+try:
+    from sagemaker_inference import environment
+except:
+    from sagemaker_training import environment
+
 
 def args_parser():
     parser = argparse.ArgumentParser(description='FMNIST baseline')
@@ -131,6 +136,13 @@ def args_parser():
                         default=32,
                         type=int,
                         help='image size')
+
+    env = environment.Environment()
+    parser.add_argument("--hosts", type=list, default=env.hosts)
+    parser.add_argument("--current-host", type=str, default=env.current_host)
+    parser.add_argument("--model-dir", type=str, default=env.model_dir)
+    parser.add_argument("--data-dir", type=str, default=env.channel_input_dirs.get("training"))
+    parser.add_argument("--num-gpus", type=int, default=env.num_gpus)
 
     args = parser.parse_args()
 
